@@ -53,6 +53,7 @@
     </build>
 
     <distributionManagement>
+        <!-- Repository in which we deploy this project, when desired. -->
         <repository>
             <id>igniterealtime</id>
             <name>Ignite Realtime Repository</name>
@@ -61,6 +62,7 @@
     </distributionManagement>
 
     <repositories>
+        <!-- Where we obtain dependencies. -->
         <repository>
             <id>igniterealtime</id>
             <name>Ignite Realtime Repository</name>
@@ -68,4 +70,14 @@
         </repository>
     </repositories>
 
+    <pluginRepositories>
+        <!-- Typically used to retrieve Maven plugins used by this project from. This
+             apparently is also used to obtain the dependencies _used by_ plugins
+             (eg: openfire-plugin-assembly-descriptor) -->
+        <pluginRepository>
+            <id>igniterealtime</id>
+            <name>Ignite Realtime Repository</name>
+            <url>https://igniterealtime.org/archiva/repository/maven/</url>
+        </pluginRepository>
+    </pluginRepositories>
 </project>
