@@ -53,24 +53,18 @@
     </build>
 
     <distributionManagement>
-        <snapshotRepository>
+        <repository>
             <id>igniterealtime</id>
-            <name>Ignite Realtime</name>
-            <url>https://www.igniterealtime.org/archiva/repository/snapshots</url>
-        </snapshotRepository>
+            <name>Ignite Realtime Repository</name>
+            <url>https://www.igniterealtime.org/archiva/repository/maven/</url>
+        </repository>
     </distributionManagement>
 
     <repositories>
         <repository>
             <id>igniterealtime</id>
-            <name>Ignite Realtime Repository (Snapshots)</name>
-            <url>http://igniterealtime.org/archiva/repository/snapshots/</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
+            <name>Ignite Realtime Repository</name>
+            <url>http://igniterealtime.org/archiva/repository/maven/</url>
         </repository>
     </repositories>
 
