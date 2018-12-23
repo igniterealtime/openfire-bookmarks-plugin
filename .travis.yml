@@ -12,7 +12,7 @@ before_install: "git clone --depth 1 https://github.com/igniterealtime/ci-toolin
 
 deploy:
   provider: script
-  script: "mvn deploy --settings target/travis/maven-settings-for-openfire-plugins.xml"
+  script: "mvn deploy --settings target/ci-tooling/maven-settings-for-openfire-plugins.xml"
   skip_cleanup: true
   on:
     tags: false
