@@ -16,44 +16,22 @@
         <sourceDirectory>src/java</sourceDirectory>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <!-- FIXME: This temporarily overrides the provided plugin, to set appendAssemblyId and attach to true.
-                     This change should be pushed down to the parent project, after the development to distribute plugins via Maven has settled. -->
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.6</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.igniterealtime.openfire.plugins</groupId>
-                        <artifactId>openfire-plugin-assembly-descriptor</artifactId>
-                        <version>${openfire.version}</version>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <appendAssemblyId>true</appendAssemblyId>
-                            <finalName>${plugin.name}</finalName>
-                            <attach>true</attach>
-                            <!-- This is where we use our shared assembly descriptor -->
-                            <descriptorRefs>
-                                <descriptorRef>openfire-plugin-assembly</descriptorRef>
-                            </descriptorRefs>
-                        </configuration>
-                    </execution>
-                </executions>
-                <!-- End of override -->
             </plugin>
             <plugin>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-jspc-maven-plugin</artifactId>
+                <!-- Force the Openfire 4.2.x compatible version of JSP -->
+                <version>9.2.14.v20151106</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.igniterealtime.openfire</groupId>
+                        <artifactId>xmppserver</artifactId>
+                        <version>${openfire.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
-
     </build>
 
     <distributionManagement>
