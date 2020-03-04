@@ -1,16 +1,16 @@
 # Bookmarks Plugin Readme
 
-##Overview
+## Overview
 
 The bookmarks plugin allows to manage groupchat and URL bookmarks.
 
-##Installation
+## Installation
 
 Copy bookmark.jar into the plugins directory of your Openfire installation.
 The plugin will then be automatically deployed. To upgrade to a new version,
 copy the new bookmark.jar file over the existing file.
 
-##Upgrading from ClientControl
+## Upgrading from ClientControl
 
 The functionality provided by the Bookmarks plugin was past of the
 ClientControl plugin (up to and including version 1.3.1 of ClientControl).
@@ -20,7 +20,7 @@ to be available. It is however recommended to avoid using the Bookmarks
 plugin in combination with the ClientControl plugin version 1.3.1 or
 earlier.
 
-##Upgrading from Enterprise
+## Upgrading from Enterprise
 
 If you are upgrading from the Enterprise plugin, and wish to keep your old
 bookmarks, you will need to manually run some database scripts to
