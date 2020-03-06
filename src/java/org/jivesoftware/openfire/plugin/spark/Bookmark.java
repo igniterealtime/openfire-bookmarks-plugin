@@ -1,4 +1,7 @@
-/*
+/**
+ * $Revision: 3034 $
+ * $Date: 2005-11-04 21:02:33 -0300 (Fri, 04 Nov 2005) $
+ *
  * Copyright (C) 2006-2008 Jive Software. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +31,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.io.Serializable;
 
 import org.jivesoftware.database.DbConnectionManager;
 import org.jivesoftware.database.JiveID;
@@ -35,6 +39,12 @@ import org.jivesoftware.database.SequenceManager;
 import org.jivesoftware.util.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+
 
 /**
  * Represents a Bookmark. Each bookmark can apply to a set of users and groups, or to
@@ -58,8 +68,11 @@ import org.slf4j.LoggerFactory;
  *
  * @author Derek DeMoro, Matt Tucker
  */
+
+@XmlRootElement(name = "bookmark")
+@XmlType(propOrder = { "bookmarkID", "type", "name", "value", "globalBookmark", "users", "groups", "properties" })
 @JiveID(55)
-public class Bookmark {
+public class Bookmark implements Serializable {
 
     private static final Logger Log = LoggerFactory.getLogger(Bookmark.class);
 
@@ -80,7 +93,9 @@ public class Bookmark {
     private static final String LOAD_BOOKMARK =
             "SELECT bookmarkType, bookmarkName, bookmarkValue, isGlobal FROM " +
                     "ofBookmark WHERE bookmarkID=?";
-
+    private static final String LOAD_BOOKMARK_BY_VALUE =
+            "SELECT bookmarkType, bookmarkName, bookmarkID, isGlobal FROM " +
+                    "ofBookmark WHERE bookmarkValue=?";
     private static final String LOAD_PROPERTIES =
             "SELECT name, propValue FROM ofBookmarkProp WHERE bookmarkID=?";
     private static final String INSERT_PROPERTY =
@@ -103,6 +118,10 @@ public class Bookmark {
     private static int USERS = 0;
     private static int GROUPS = 1;
 
+    public Bookmark() {
+
+    }
+
     /**
      * Creates a new bookmark.
      *
@@ -114,7 +133,30 @@ public class Bookmark {
         this.type = type;
         this.name = name;
         this.value = value;
-        properties = new HashMap<String, String>();
+
+        try {
+            insertIntoDb();
+            insertBookmarkPermissions();
+        }
+        catch (Exception e) {
+            Log.error(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Creates a new bookmark.
+     *
+     * @param type  the bookmark type.
+     * @param name  the name of the bookmark.
+     * @param value the value of the bookmark.
+     */
+    public Bookmark(Type type, String name, String value, Collection<String> users, Collection<String> groups) {
+        this.type = type;
+        this.name = name;
+        this.value = value;
+        this.users = users;
+        this.groups = groups;
+
         try {
             insertIntoDb();
             insertBookmarkPermissions();
@@ -137,10 +179,23 @@ public class Bookmark {
     }
 
     /**
+     * Loads an existing bookmark based on its value.
+     *
+     * @param value the bookmark value.
+     * @throws NotFoundException if the bookmark does not exist or could not be loaded.
+     */
+    public Bookmark(String value) throws NotFoundException {
+        this.value = value;
+        loadFromDbByValue();
+        loadPermissions();
+    }
+
+    /**
      * Returns the unique ID of the bookmark.
      *
      * @return the bookmark ID.
      */
+    @XmlElement
     public long getBookmarkID() {
         return bookmarkID;
     }
@@ -150,6 +205,7 @@ public class Bookmark {
      *
      * @return the bookmark type.
      */
+    @XmlElement
     public Type getType() {
         return type;
     }
@@ -169,6 +225,7 @@ public class Bookmark {
      *
      * @return the name of the bookmark.
      */
+    @XmlElement
     public String getName() {
         return name;
     }
@@ -192,6 +249,7 @@ public class Bookmark {
      *
      * @return the value of the bookmark.
      */
+    @XmlElement
     public String getValue() {
         return value;
     }
@@ -214,6 +272,7 @@ public class Bookmark {
      *
      * @return the collection of usernames that have been assigned the bookmark.
      */
+    @XmlElement
     public Collection<String> getUsers() {
         return users;
     }
@@ -234,6 +293,7 @@ public class Bookmark {
      *
      * @return a collection of group names.
      */
+    @XmlElement
     public Collection<String> getGroups() {
         return groups;
     }
@@ -250,6 +310,7 @@ public class Bookmark {
      *
      * @return true if a global bookmark.
      */
+    @XmlElement
     public boolean isGlobalBookmark() {
         return global;
     }
@@ -319,7 +380,10 @@ public class Bookmark {
      * @param name  the name of the property to set.
      * @param value the new value for the property.
      */
-    public void setProperty(String name, String value) {
+    public void setProperty(String name, String value)
+    {
+        Log.debug("setProperty " + name + " " + value);
+
         if (properties == null) {
             loadPropertiesFromDb();
         }
@@ -388,7 +452,7 @@ public class Bookmark {
     /**
      * Inserts a new bookmark into the database.
      */
-    private void insertIntoDb() throws SQLException {
+    private void insertIntoDb() {
         this.bookmarkID = SequenceManager.nextID(this);
         Connection con = null;
         boolean abortTransaction = false;
@@ -403,9 +467,8 @@ public class Bookmark {
             pstmt.executeUpdate();
             pstmt.close();
         }
-        catch (SQLException sqle) {
+        catch (SQLException e) {
             abortTransaction = true;
-            throw sqle;
         }
         finally {
             DbConnectionManager.closeTransactionConnection(con, abortTransaction);
@@ -417,7 +480,7 @@ public class Bookmark {
         try {
             deleteBookmarkPermissions();
         }
-        catch (SQLException e) {
+        catch (Exception e) {
             Log.error(e.getMessage(), e);
         }
 
@@ -427,7 +490,7 @@ public class Bookmark {
                 try {
                     insertBookmarkPermission(USERS, user);
                 }
-                catch (SQLException e) {
+                catch (Exception e) {
                     Log.error(e.getMessage(), e);
                 }
             }
@@ -438,14 +501,14 @@ public class Bookmark {
                 try {
                     insertBookmarkPermission(GROUPS, group);
                 }
-                catch (SQLException e) {
+                catch (Exception e) {
                     Log.error(e.getMessage(), e);
                 }
             }
         }
     }
 
-    private void insertBookmarkPermission(int type, String name) throws SQLException {
+    private void insertBookmarkPermission(int type, String name) {
         Connection con = null;
         boolean abortTransaction = false;
         try {
@@ -457,16 +520,15 @@ public class Bookmark {
             pstmt.executeUpdate();
             pstmt.close();
         }
-        catch (SQLException sqle) {
+        catch (SQLException e) {
             abortTransaction = true;
-            throw sqle;
         }
         finally {
             DbConnectionManager.closeTransactionConnection(con, abortTransaction);
         }
     }
 
-    private void deleteBookmarkPermissions() throws SQLException {
+    private void deleteBookmarkPermissions() {
         Connection con = null;
         boolean abortTransaction = false;
         try {
@@ -476,9 +538,8 @@ public class Bookmark {
             pstmt.executeUpdate();
             pstmt.close();
         }
-        catch (SQLException sqle) {
+        catch (SQLException e) {
             abortTransaction = true;
-            throw sqle;
         }
         finally {
             DbConnectionManager.closeTransactionConnection(con, abortTransaction);
@@ -555,6 +616,39 @@ public class Bookmark {
     }
 
     /**
+     * Loads a bookmark from the database by value.
+     *
+     * @throws NotFoundException if the bookmark could not be loaded.
+     */
+    private void loadFromDbByValue() throws NotFoundException {
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            con = DbConnectionManager.getConnection();
+            pstmt = con.prepareStatement(LOAD_BOOKMARK_BY_VALUE);
+            pstmt.setString(1, value);
+            rs = pstmt.executeQuery();
+
+            if (!rs.next()) {
+                throw new NotFoundException("Bookmark not found: " + value);
+            }
+            this.type = Type.valueOf(rs.getString(1));
+            this.name = rs.getString(2);
+            this.bookmarkID = rs.getLong(3);
+            this.global = rs.getInt(4) == 1;
+            rs.close();
+            pstmt.close();
+        }
+        catch (SQLException sqle) {
+            Log.error(sqle.getMessage(), sqle);
+        }
+        finally {
+            DbConnectionManager.closeConnection(rs, pstmt, con);
+        }
+    }
+
+    /**
      * Saves a bookmark to the database.
      */
     private void saveToDb() {
@@ -611,6 +705,8 @@ public class Bookmark {
      * Inserts a new property into the datatabase.
      */
     private void insertPropertyIntoDb(String name, String value) {
+        Log.debug("insertPropertyIntoDb " + name + " " + value);
+
         Connection con = null;
         PreparedStatement pstmt = null;
         boolean abortTransaction = false;

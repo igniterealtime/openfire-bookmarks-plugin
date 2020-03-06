@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (C) 1999-2008 Jive Software. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import org.dom4j.Element;
+import org.jivesoftware.openfire.*;
 import org.jivesoftware.openfire.group.Group;
 import org.jivesoftware.openfire.group.GroupManager;
 import org.jivesoftware.openfire.group.GroupNotFoundException;
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import org.xmpp.packet.IQ;
 import org.xmpp.packet.JID;
 import org.xmpp.packet.Packet;
+import org.jivesoftware.util.NotFoundException;
 
 /**
  * Intercepts Bookmark Storage requests and appends all server based Bookmarks to
@@ -53,17 +55,18 @@ public class BookmarkInterceptor implements PacketInterceptor {
     }
 
     public void interceptPacket(Packet packet, Session session, boolean incoming, boolean processed) throws PacketRejectedException {
-        if (!processed && packet instanceof IQ && !incoming) {
+        if (!processed && packet instanceof IQ) {
 
             // Check for the Bookmark Storage element and hand off to the Bookmark engine.
             IQ iq = (IQ)packet;
             Element childElement = iq.getChildElement();
-            if (childElement == null || iq.getType() != IQ.Type.result) {
+            if (childElement == null) {
                 return;
             }
 
             String namespace = childElement.getNamespaceURI();
-            if ("jabber:iq:private".equals(namespace)) {
+
+            if ("jabber:iq:private".equals(namespace) && iq.getType() == IQ.Type.result && !incoming) {
                 // In private data, when a user is attempting to retrieve bookmark
                 // information, there will be a storage:bookmarks namespace.
                 Element storageElement = childElement.element("storage");
@@ -76,6 +79,53 @@ public class BookmarkInterceptor implements PacketInterceptor {
                     // Append Server defined bookmarks for user.
                     JID toJID = iq.getTo();
                     addBookmarks(toJID, storageElement);
+                }
+            }
+            else
+
+            if ("vcard-temp".equals(namespace)) {
+                String key = null;
+
+                if (iq.getType() == IQ.Type.get && incoming && iq.getTo() != null)
+                {
+                    key = iq.getTo().toString();
+                }
+                else
+
+                if (iq.getType() == IQ.Type.error && !incoming && iq.getFrom() != null)
+                {
+                    key = iq.getFrom().toString();
+                }
+
+                if (key != null)
+                {
+                    try {
+                        Bookmark bookmark = BookmarkManager.getBookmark(key);
+                        String avatarUri = bookmark.getProperty("avatar_uri");
+
+                        if (avatarUri != null) {
+                            String[] avatar = avatarUri.split(";base64,");
+                            String mime = avatar[0].substring(5);
+                            String bin = avatar[1];
+
+                            IQ reply = IQ.createResultIQ(iq);
+                            Element child = reply.setChildElement("vCard", "vcard-temp");
+                            child.addElement("FN").setText(bookmark.getName());
+                            child.addElement("NICKNAME").setText(bookmark.getName());
+
+                            Element photo = child.addElement("PHOTO");
+                            photo.addElement("TYPE").setText(mime);
+                            photo.addElement("BINVAL").setText(bin);
+
+                            Log.debug("interceptPacket reply \n" + reply);
+                            XMPPServer.getInstance().getIQRouter().route(reply);
+
+                            throw new PacketRejectedException("handled by bookmarks plugin");
+                        }
+                    }
+                    catch (NotFoundException e) {
+                        // do nothing
+                    }
                 }
             }
         }
@@ -103,15 +153,20 @@ public class BookmarkInterceptor implements PacketInterceptor {
      * @param storageElement the JEP-0048 compliant storage element.
      */
     private void addBookmarks(JID jid, Element storageElement) {
-        final Collection<Bookmark> bookmarks = BookmarkManager.getBookmarks();
-        for (Bookmark bookmark : bookmarks) {
-            // Check to see if the bookmark should be appended for this
-            // particular user.
-            boolean addBookmarkForUser = bookmark.isGlobalBookmark() || isBookmarkForJID(jid, bookmark);
-            if (addBookmarkForUser) {
-                // Add bookmark element.
-                addBookmarkElement(jid, bookmark, storageElement);
+        try {
+            final Collection<Bookmark> bookmarks = BookmarkManager.getBookmarks();
+
+            for (Bookmark bookmark : bookmarks) {
+                // Check to see if the bookmark should be appended for this
+                // particular user.
+                boolean addBookmarkForUser = bookmark.isGlobalBookmark() || isBookmarkForJID(jid, bookmark);
+                if (addBookmarkForUser) {
+                    // Add bookmark element.
+                    addBookmarkElement(jid, bookmark, storageElement);
+                }
             }
+        } catch (Exception e) {
+            Log.error("addBookmarks", e);
         }
     }
 
@@ -204,6 +259,9 @@ public class BookmarkInterceptor implements PacketInterceptor {
                         User currentUser = userManager.getUser(jid.getNode());
                         Element nick = conferenceElement.addElement("nick");
                         nick.addText(currentUser.getName());
+                    }
+                    if (bookmark.getProperty("avatar_uri") != null) {
+                       conferenceElement.addAttribute("avatar_uri", bookmark.getProperty("avatar_uri"));
                     }
                 }
                 appendSharedElement(conferenceElement);

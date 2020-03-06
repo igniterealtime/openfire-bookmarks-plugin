@@ -8,29 +8,52 @@
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <%@ page import="java.util.StringTokenizer" %>
+<%@ page import="java.util.Iterator"%>
 <%@ page import="org.jivesoftware.util.NotFoundException"%>
 <%@ page import="org.jivesoftware.util.LocaleUtils"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%
     boolean urlType = false;
-    boolean groupchatType = false;
-
+    boolean groupchatType = false;    
+    String propertyAction = request.getParameter("property");
     String type = request.getParameter("type");
+    
     if ("url".equals(type)) {
         urlType = true;
     }
     else {
-        groupchatType = true;
+        groupchatType = true;   
     }
 
     boolean edit = request.getParameter("edit") != null;
     String bookmarkID = request.getParameter("bookmarkID");
 
     Bookmark editBookmark = null;
+    
     if (edit && bookmarkID != null) {
         try {
             editBookmark = new Bookmark(Long.parseLong(bookmarkID));
+            
+            if (propertyAction != null) {
+                String propName = request.getParameter("propName");            
+                String propValue = request.getParameter("propValue");                  
+                
+                if (propertyAction.equals("set")) {
+                    editBookmark.setProperty(propName, propValue);                
+                }
+                else {
+                    editBookmark.deleteProperty(propName);
+                }
+            
+                if (urlType) {
+                    response.sendRedirect("url-bookmarks.jsp");
+                }
+                else if (groupchatType) {
+                    response.sendRedirect("groupchat-bookmarks.jsp");
+                }
+                return;                
+            }            
         }
         catch (NotFoundException e) {
             Log.error(e);
@@ -39,10 +62,11 @@
 
     Map<String,String> errors = new HashMap<String,String>();
     String groupchatName = request.getParameter("groupchatName");
-    String groupchatJID = request.getParameter("groupchatJID");
+    String groupchatJID = request.getParameter("groupchatJID");  
 
     boolean autojoin = ParamUtils.getBooleanParameter(request,"autojoin");
     boolean nameAsNick = ParamUtils.getBooleanParameter(request,"nameasnick");
+    String avatarUri = request.getParameter("avatarUri");      
 
     String users = request.getParameter("users");
     String groups = request.getParameter("groups");
@@ -191,6 +215,9 @@
                     else {
                     bookmark.deleteProperty("nameasnick");
                 }
+                if (avatarUri != null && avatarUri.startsWith("data:")) {
+                    bookmark.setProperty("avatar_uri", avatarUri);                
+                }
             }
         }
     }
@@ -234,6 +261,55 @@
         function validateForms(form) {
             form.users.disabled = form.all.checked;
             form.groups.disabled = form.all.checked;
+        }
+        
+        function doedit(propName, propValue) {
+            document.propForm.property.value = "set";
+            document.propForm.propName.value = propName;
+            document.propForm.propValue.value = propValue;            
+        }
+                
+        function dodelete(propName) {            
+            document.propForm.property.value = "delete";
+            document.propForm.propName.value = propName;        
+            document.propForm.submit();            
+        }   
+        
+        function doicon() {
+            var uploadAvatar = document.getElementById("uploadAvatar")
+            console.debug("doicon", uploadAvatar);
+                        
+            if (uploadAvatar) for (var i = 0, file; file = uploadAvatar.files[i]; i++) {
+            
+                if (file.name.endsWith(".png") || file.name.endsWith(".jpg") || file.name.endsWith(".webp") || file.name.endsWith(".gif"))
+                {
+                    var reader = new FileReader();
+
+                    reader.onload = function(event)
+                    {
+                        var dataUri = event.target.result;
+                        console.debug("doicon", dataUri);
+
+                        var sourceImage = new Image();
+
+                        sourceImage.onload = function() {
+                            var canvas = document.createElement("canvas");
+                            canvas.width = 32;
+                            canvas.height = 32;
+                            canvas.getContext("2d").drawImage(sourceImage, 0, 0, 32, 32);
+                            document.f.avatarUri.value = canvas.toDataURL();
+                        }
+
+                        sourceImage.src = dataUri;
+                    };
+
+                    reader.onerror = function(event) {
+                        console.error("doicon - error", event);
+                    };
+
+                    reader.readAsDataURL(file);
+                }
+            }        
         }
     </script>
     <style type="text/css">
@@ -366,7 +442,10 @@ else { %>
         <tr>
             <td><b><fmt:message key="group.chat.bookmark.nameasnick" />:</b></td><td><input type="checkbox" name="nameasnick" <%= nameAsNick ? "checked" : "" %>/></td>
         </tr>
-
+        <tr>
+            <input type="hidden" name="avatarUri" value=""/>        
+            <td><b><fmt:message key="group.chat.bookmark.icon" />:</b></td><td><input onchange="doicon()" name='uploadAvatar' id='uploadAvatar' type='file' name='files[]'> </td>
+        </tr>        
         <tr>
             <td></td>
             <td><input type="submit" name="createGroupchatBookmark"  value="<%= editBookmark != null ? LocaleUtils.getLocalizedString("bookmark.save.changes", "bookmarks") : LocaleUtils.getLocalizedString("create", "bookmarks")  %>"/>&nbsp;
@@ -387,9 +466,71 @@ else { %>
 </form>
 
 <% } %>
+<% if (editBookmark != null) { %>
+<form name="propForm" id="propForm" action="create-bookmark.jsp" method="post">
+    <input type="hidden" name="type" value="<%= groupchatType ? "groupchat" : "url" %>"/>    
+    <input type="hidden" name="property" value="set"/>
+    <input type="hidden" name="edit" value="true" />
+    <input type="hidden" name="bookmarkID" value="<%= editBookmark.getBookmarkID()%>"/>    
+    <div class="jive-table">
+        <table cellspacing="0" width="100%">
+            <th><fmt:message key="property.property.name"/></th>
+            <th><fmt:message key="property.property.value"/></th>
+            <th><fmt:message key="property.edit"/></th>
+            <th><fmt:message key="property.delete"/></th>            
+            <%
+                Iterator<String> itr = editBookmark.getPropertyNames();
+                while (itr.hasNext()) {
+                    String propName = itr.next();
+                    String propValue = editBookmark.getProperty(propName);
+                    String formatValue = propValue;
+                    
+                    if (propValue.startsWith("data:"))  formatValue = "<img src='" + propValue + "' />";
+                    if (propName.contains("password")) formatValue = "*************";
+            %>
+            <tr>
+                <td><%=propName%></td>
+                <td><%=formatValue%></td>
+                <td><img src="/images/edit-16x16.gif" border="0" width="16" 
+                    height="16" alt="Edit Property" onclick="doedit('<%=propName%>', '<%=propValue%>')"></td>
+                <td><img src="/images/delete-16x16.gif" border="0" width="16"
+                    height="16" alt="Delete Property" onclick="dodelete('<%=propName%>')"></td>
+            </tr>
 
+            <%
+                }
+            %>
+        </table>
+    </div>
+    <div class="jive-table">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <thead>
+                <tr>
+                    <th colspan="2"><fmt:message key="property.edit.property"/></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr valign="top">
+                    <td><fmt:message key="property.property.name"/>:</td>
+                    <td><input type="textfield" id="propName" name="propName"
+                        value=""></td>
+                </tr>
+                <tr valign="top">
+                    <td><fmt:message key="property.property.value"/>:</td>
+                    <td><textarea cols="45" rows="5" id="propValue" name="propValue" style="z-index: auto; position: relative; line-height: normal; font-size: 13.3333px; transition: none; background: transparent !important;"></textarea>
+                    </td>
+                </tr>
 
-
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2"><input type="submit" value="Save" /></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</form>
+<% } %>
 </body>
 </html>
 
