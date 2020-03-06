@@ -47,7 +47,7 @@
 
     <div class="div-border" style="padding: 12px; width: 95%;">
         <table class="jive-table" cellspacing="0" width="100%">
-            <th><fmt:message key="group.chat.bookmark.name" /></th><th><fmt:message key="group.chat.bookmark.address"/></th><th><fmt:message key="users" /></th><th><fmt:message key="groups" /></th><th><fmt:message key="group.chat.bookmark.autojoin" /></th><th><fmt:message key="group.chat.bookmark.nameasnick" /></th><th><fmt:message key="options" /></th>
+            <th><fmt:message key="group.chat.bookmark.name" /></th><th><fmt:message key="group.chat.bookmark.address"/></th><th><fmt:message key="group.chat.bookmark.icon" /></th><th><fmt:message key="users" /></th><th><fmt:message key="groups" /></th><th><fmt:message key="group.chat.bookmark.autojoin" /></th><th><fmt:message key="group.chat.bookmark.nameasnick" /></th><th><fmt:message key="options" /></th>
             <%
                 boolean hasBookmarks = false;
                 for (Bookmark bookmark : bookmarks) {
@@ -71,6 +71,7 @@
             <tr style="border-left: none;">
                 <td><%= bookmark.getName()%></td>
                 <td><%= bookmark.getValue()%></td>
+                <td><%= bookmark.getProperty("avatar_uri") != null ? "<img width='16' src='" + bookmark.getProperty("avatar_uri") + "'>" : "&nbsp;"%></td>
                 <td><%= users%></td>
                 <td><%= groups%></td>
                 <td><%= bookmark.getProperty("autojoin") != null ? "<img src='/images/check.gif'>" : "&nbsp;"%></td>
