@@ -202,7 +202,7 @@
                 }
 
                 if (isRSS) bookmark.setProperty("rss", "true"); else bookmark.deleteProperty("rss");
-                if (isWebApp) bookmark.setProperty("webpapp", "true"); else bookmark.deleteProperty("webpapp");
+                if (isWebApp) bookmark.setProperty("webapp", "true"); else bookmark.deleteProperty("webapp");
                 if (isCollabApp) bookmark.setProperty("collabapp", "true"); else bookmark.deleteProperty("collabapp");
                 if (isHomePage) bookmark.setProperty("homepage", "true"); else bookmark.deleteProperty("homepage");                
 
@@ -382,7 +382,7 @@
         </tr>
         <% } %>
         <tr><td><b><fmt:message key="bookmark.create.rss.feed" /></b></td><td><input type="checkbox" name="rss" <%= isRSS ? "checked" : "" %>/></td></tr>
-        <td><b><fmt:message key="bookmark.create.web.app" /></b></td><td><input type="checkbox" name="webpapp" <%= isWebApp ? "checked" : "" %>/></td></tr>
+        <tr><td><b><fmt:message key="bookmark.create.web.app" /></b></td><td><input type="checkbox" name="webapp" <%= isWebApp ? "checked" : "" %>/></td></tr>
         <tr><td><b><fmt:message key="bookmark.create.collab.app" /></b></td><td><input type="checkbox" name="collabapp" <%= isCollabApp ? "checked" : "" %>/></td></tr>
         <tr><td><b><fmt:message key="bookmark.create.home.page" /></b></td><td><input type="checkbox" name="homepage" <%= isHomePage ? "checked" : "" %>/></td></tr>
 
