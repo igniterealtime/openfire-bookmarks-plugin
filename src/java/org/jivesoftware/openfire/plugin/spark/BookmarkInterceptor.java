@@ -237,6 +237,21 @@ public class BookmarkInterceptor implements PacketInterceptor {
                 if (rss) {
                     urlBookmarkElement.addAttribute("rss", Boolean.toString(rss));
                 }
+
+                boolean webapp = Boolean.valueOf(bookmark.getProperty("webapp"));
+                if (webapp) {
+                    urlBookmarkElement.addAttribute("webapp", Boolean.toString(webapp));
+                }
+
+                boolean collabapp = Boolean.valueOf(bookmark.getProperty("collabapp"));
+                if (collabapp) {
+                    urlBookmarkElement.addAttribute("collabapp", Boolean.toString(collabapp));
+                }
+
+                boolean homepage = Boolean.valueOf(bookmark.getProperty("homepage"));
+                if (homepage) {
+                    urlBookmarkElement.addAttribute("homepage", Boolean.toString(homepage));
+                }
             }
             appendSharedElement(urlBookmarkElement);
         }

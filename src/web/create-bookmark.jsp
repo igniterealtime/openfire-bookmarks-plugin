@@ -76,6 +76,9 @@
     String urlName = request.getParameter("urlName");
 
     boolean isRSS = ParamUtils.getBooleanParameter(request, "rss", false);
+    boolean isWebApp = ParamUtils.getBooleanParameter(request, "webapp", false);
+    boolean isCollabApp = ParamUtils.getBooleanParameter(request, "collabapp", false);
+    boolean isHomePage = ParamUtils.getBooleanParameter(request, "homepage", false);   
 
     boolean allUsers = ParamUtils.getBooleanParameter(request,"all");
 
@@ -124,6 +127,9 @@
             groups = getCommaDelimitedList(editBookmark.getGroups());
             allUsers = editBookmark.isGlobalBookmark();
             isRSS = editBookmark.getProperty("rss") != null;
+            isWebApp = editBookmark.getProperty("webapp") != null;
+            isCollabApp = editBookmark.getProperty("collabapp") != null;
+            isHomePage = editBookmark.getProperty("homepage") != null;            
         }
         else {
             groupchatName = "";
@@ -195,12 +201,11 @@
                     bookmark.setProperty("url", url);
                 }
 
-                if (isRSS) {
-                    bookmark.setProperty("rss", "true");
-                }
-                else {
-                bookmark.deleteProperty("rss");
-                }
+                if (isRSS) bookmark.setProperty("rss", "true"); else bookmark.deleteProperty("rss");
+                if (isWebApp) bookmark.setProperty("webpapp", "true"); else bookmark.deleteProperty("webpapp");
+                if (isCollabApp) bookmark.setProperty("collabapp", "true"); else bookmark.deleteProperty("collabapp");
+                if (isHomePage) bookmark.setProperty("homepage", "true"); else bookmark.deleteProperty("homepage");                
+
             }
             else {
                 if (autojoin) {
@@ -377,6 +382,9 @@
         </tr>
         <% } %>
         <tr><td><b><fmt:message key="bookmark.create.rss.feed" /></b></td><td><input type="checkbox" name="rss" <%= isRSS ? "checked" : "" %>/></td></tr>
+        <td><b><fmt:message key="bookmark.create.web.app" /></b></td><td><input type="checkbox" name="webpapp" <%= isWebApp ? "checked" : "" %>/></td></tr>
+        <tr><td><b><fmt:message key="bookmark.create.collab.app" /></b></td><td><input type="checkbox" name="collabapp" <%= isCollabApp ? "checked" : "" %>/></td></tr>
+        <tr><td><b><fmt:message key="bookmark.create.home.page" /></b></td><td><input type="checkbox" name="homepage" <%= isHomePage ? "checked" : "" %>/></td></tr>
 
         <tr><td></td><td><input type="submit" name="createURLBookmark"
                                 value="<%= editBookmark != null ? LocaleUtils.getLocalizedString("bookmark.save.changes", "bookmarks") : LocaleUtils.getLocalizedString("create", "bookmarks")  %>"/>
