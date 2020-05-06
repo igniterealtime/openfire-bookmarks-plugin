@@ -16,4 +16,5 @@ deploy:
   script: "mvn deploy --settings target/ci-tooling/maven-settings-for-openfire-plugins.xml"
   skip_cleanup: true
   on:
+    repo: igniterealtime/openfire-bookmarks-plugin
     all_branches: true
