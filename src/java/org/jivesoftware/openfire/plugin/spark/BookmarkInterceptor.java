@@ -103,22 +103,26 @@ public class BookmarkInterceptor implements PacketInterceptor {
                         Bookmark bookmark = BookmarkManager.getBookmark(key);
                         String avatarUri = bookmark.getProperty("avatar_uri");
 
-                        if (avatarUri != null) {
-                            String[] avatar = avatarUri.split(";base64,");
-                            String mime = avatar[0].substring(5);
-                            String bin = avatar[1];
+                        if (avatarUri != null)
+                        {
+                            if (iq.getType() == IQ.Type.get)
+                            {
+                                String[] avatar = avatarUri.split(";base64,");
+                                String mime = avatar[0].substring(5);
+                                String bin = avatar[1];
 
-                            IQ reply = IQ.createResultIQ(iq);
-                            Element child = reply.setChildElement("vCard", "vcard-temp");
-                            child.addElement("FN").setText(bookmark.getName());
-                            child.addElement("NICKNAME").setText(bookmark.getName());
+                                IQ reply = IQ.createResultIQ(iq);
+                                Element child = reply.setChildElement("vCard", "vcard-temp");
+                                child.addElement("FN").setText(bookmark.getName());
+                                child.addElement("NICKNAME").setText(bookmark.getName());
 
-                            Element photo = child.addElement("PHOTO");
-                            photo.addElement("TYPE").setText(mime);
-                            photo.addElement("BINVAL").setText(bin);
+                                Element photo = child.addElement("PHOTO");
+                                photo.addElement("TYPE").setText(mime);
+                                photo.addElement("BINVAL").setText(bin);
 
-                            Log.debug("interceptPacket reply \n" + reply);
-                            XMPPServer.getInstance().getIQRouter().route(reply);
+                                Log.debug("interceptPacket reply \n" + reply);
+                                XMPPServer.getInstance().getIQRouter().route(reply);
+                            }
 
                             throw new PacketRejectedException("handled by bookmarks plugin");
                         }
@@ -278,6 +282,27 @@ public class BookmarkInterceptor implements PacketInterceptor {
                     if (bookmark.getProperty("avatar_uri") != null) {
                        conferenceElement.addAttribute("avatar_uri", bookmark.getProperty("avatar_uri"));
                     }
+
+                    boolean ofmeet_recording = Boolean.valueOf(bookmark.getProperty("ofmeet_recording"));
+                    if (ofmeet_recording) conferenceElement.addAttribute("ofmeet_recording", Boolean.toString(ofmeet_recording));
+
+                    boolean ofmeet_tags = Boolean.valueOf(bookmark.getProperty("ofmeet_tags"));
+                    if (ofmeet_tags) conferenceElement.addAttribute("ofmeet_tags", Boolean.toString(ofmeet_tags));
+
+                    boolean ofmeet_cryptpad = Boolean.valueOf(bookmark.getProperty("ofmeet_cryptpad"));
+                    if (ofmeet_cryptpad) conferenceElement.addAttribute("ofmeet_cryptpad", Boolean.toString(ofmeet_cryptpad));
+
+                    boolean ofmeet_captions = Boolean.valueOf(bookmark.getProperty("ofmeet_captions"));
+                    if (ofmeet_captions) conferenceElement.addAttribute("ofmeet_captions", Boolean.toString(ofmeet_captions));
+
+                    boolean ofmeet_transcription = Boolean.valueOf(bookmark.getProperty("ofmeet_transcription"));
+                    if (ofmeet_transcription) conferenceElement.addAttribute("ofmeet_transcription", Boolean.toString(ofmeet_transcription));
+
+                    boolean ofmeet_uploads = Boolean.valueOf(bookmark.getProperty("ofmeet_uploads"));
+                    if (ofmeet_uploads) conferenceElement.addAttribute("ofmeet_uploads", Boolean.toString(ofmeet_uploads));
+
+                    boolean ofmeet_breakout = Boolean.valueOf(bookmark.getProperty("ofmeet_breakout"));
+                    if (ofmeet_breakout) conferenceElement.addAttribute("ofmeet_breakout", Boolean.toString(ofmeet_breakout));
                 }
                 appendSharedElement(conferenceElement);
 
