@@ -413,9 +413,9 @@ else { %>
     <table class="div-border" cellpadding="3">
         <tr valign="top">
             <td><b><fmt:message key="group.chat.bookmark.name" />:</b></td>
-            <td colspan="3"><input type="text" name="groupchatName" size="40" value="<%= groupchatName %>"/><br/>
+            <td colspan="3"><input type="text" name="groupchatName" size="40" value="<%= ${fn:escapeXml(groupchatName)} %>"/><br/>
                 <% if (errors.get("groupchatName") != null) { %>
-                <span class="jive-error-text"><%= errors.get("groupchatName")%><br/></span>
+                <span class="jive-error-text"><%= ${fn:escapeXml(errors.get("groupchatName"))}%><br/></span>
                 <% } %>
                 <span class="jive-description">eg. Discussion Room</span></td>
         </tr>
