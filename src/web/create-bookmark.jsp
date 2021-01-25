@@ -11,6 +11,7 @@
 <%@ page import="java.util.Iterator"%>
 <%@ page import="org.jivesoftware.util.NotFoundException"%>
 <%@ page import="org.jivesoftware.util.LocaleUtils"%>
+<%@ page import="org.apache.commons.lang3.StringEscapeUtils"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%
@@ -61,7 +62,7 @@
     }
 
     Map<String,String> errors = new HashMap<String,String>();
-    String groupchatName = request.getParameter("groupchatName");
+    String groupchatName = StringEscapeUtils.escapeHtml4(request.getParameter("groupchatName"));
     String groupchatJID = request.getParameter("groupchatJID");  
 
     boolean autojoin = ParamUtils.getBooleanParameter(request,"autojoin");
