@@ -1,20 +1,30 @@
+/**
+ * Copyright (C) 2016-2024 Ignite Realtime Foundation. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.igniterealtime.openfire.plugin;
 
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Element;
-import org.dom4j.io.SAXReader;
 import org.jivesoftware.openfire.container.Plugin;
 import org.jivesoftware.openfire.container.PluginManager;
+import org.jivesoftware.openfire.container.PluginMetadataHelper;
 import org.jivesoftware.openfire.plugin.spark.BookmarkInterceptor;
-import org.jivesoftware.util.JiveGlobals;
 import org.jivesoftware.util.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import java.io.*;
-import java.util.jar.JarFile;
-import java.util.zip.ZipEntry;
 
 /**
  * A plugin that implements XEP-0048 "Bookmarks".
@@ -34,14 +44,14 @@ public class BookmarksPlugin implements Plugin
         try
         {
             // Check if we Enterprise is installed and stop loading this plugin if found
-            if ( checkForEnterprisePlugin() )
+            if ( checkForEnterprisePlugin(manager) )
             {
                 System.out.println( "Enterprise plugin found. Stopping Bookmarks Plugin." );
                 foundIncompatiblePlugin = true;
             }
 
             // Check if we ClientControl (version <= 1.3.1) is installed and stop loading this plugin if found
-            if ( checkForIncompatibleClientControlPlugin() )
+            if ( checkForIncompatibleClientControlPlugin(manager) )
             {
                 System.out.println( "ClientControl plugin v1.3.1 or earlier found. Stopping Bookmarks Plugin." );
                 foundIncompatiblePlugin = true;
@@ -75,83 +85,29 @@ public class BookmarksPlugin implements Plugin
     /**
      * Checks if there's a plugin named "enterprise" in the Openfire plugin directory.
      *
+     * @param manager The Openfire plugin manager
      * @return true if the enterprise plugin is found, otherwise false.
      */
-    private static boolean checkForEnterprisePlugin() throws IOException
+    private static boolean checkForEnterprisePlugin(@Nonnull final PluginManager manager)
     {
-        return getPluginJar( "enterprise" ) != null;
+        return manager.getPluginByName("enterprise").isPresent();
     }
 
     /**
      * Checks if there's a plugin named "clientControl" in the Openfire plugin directory of which the version is equal
      * to or earlier than 1.3.1.
      *
+     * @param manager The Openfire plugin manager
      * @return true if the clientControl plugin (<= 1.3.1) is found, otherwise false.
      */
-    private static boolean checkForIncompatibleClientControlPlugin() throws IOException, DocumentException
+    private static boolean checkForIncompatibleClientControlPlugin(@Nonnull final PluginManager manager)
     {
-        final JarFile jar = getPluginJar( "clientControl" );
-
-        if ( jar == null )
-        {
+        final Plugin clientControlPlugin = manager.getPluginByName("clientControl").orElse(null);
+        if (clientControlPlugin == null) {
             return false;
         }
 
-        final ZipEntry pluginXml = jar.getEntry( "plugin.xml" );
-        if ( pluginXml == null )
-        {
-            // Odd - not a plugin?
-            Log.warn( "Found a clientControl.jar file that does not appear to include a plugin.xml.", jar.getName() );
-            return false;
-        }
-
-        final File tempFile = File.createTempFile( "plugin-xml", "xml" );
-        try ( final InputStream is = jar.getInputStream( pluginXml );
-              final FileOutputStream os = new FileOutputStream( tempFile ) )
-        {
-            while ( is.available() > 0 )
-            {
-                os.write( is.read() );
-            }
-
-            final SAXReader saxReader = new SAXReader();
-            saxReader.setEncoding( "UTF-8" );
-            final Document pluginXML = saxReader.read( tempFile );
-            Element element = (Element) pluginXML.selectSingleNode( "/plugin/version" );
-            if ( element != null )
-            {
-                final Version version = new Version( element.getTextTrim() );
-                return !version.isNewerThan( new Version( "1.3.1" ) );
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Returns the plugin JAR for the plugin of the provided name.
-     *
-     * @param pluginName the name of the plugin (cannot be null or empty).
-     * @return The plugin JAR file, or null when not found.
-     */
-    private static JarFile getPluginJar( final String pluginName ) throws IOException
-    {
-        File pluginDir = new File( JiveGlobals.getHomeDirectory(), "plugins" );
-        File[] jars = pluginDir.listFiles( new FileFilter()
-        {
-            public boolean accept( File pathname )
-            {
-                return pathname.getName().equalsIgnoreCase( pluginName + ".jar" );
-            }
-        } );
-
-        final File jar;
-        if ( jars.length > 0 )
-        {
-            return new JarFile( jars[ 0 ] );
-        }
-        else
-        {
-            return null;
-        }
+        final Version version = PluginMetadataHelper.getVersion(clientControlPlugin);
+        return !version.isNewerThan( new Version( "1.3.1" ) );
     }
 }

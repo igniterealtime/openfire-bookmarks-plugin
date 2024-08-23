@@ -2,11 +2,8 @@
 <%@ page errorPage="/error.jsp" %>
 <%@ page import="org.jivesoftware.openfire.plugin.spark.Bookmark" %>
 <%@ page import="org.jivesoftware.openfire.plugin.spark.BookmarkManager" %>
-<%@ page import="java.util.Collection" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
-
-
 <%
     String bookmarkID = request.getParameter("bookmarkID");
 
@@ -25,13 +22,13 @@
         }
         return;
     }
+
+    pageContext.setAttribute("bookmark", bookmark);
 %>
-
-
 <html>
 <head>
     <title><fmt:message key="bookmark.delete.confirm" /></title>
-    <meta name="pageID" content="<%= bookmark.getType() == Bookmark.Type.group_chat ? "groupchat-bookmarks" : "url-bookmarks"%>"/>
+    <meta name="pageID" content="${bookmark.type.name() eq 'group_chat' ? "groupchat-bookmarks" : "url-bookmarks"}"/>
     <style type="text/css">
         .field-text {
             font-size: 12px;
@@ -54,108 +51,124 @@
 </p>
 
 
-<% if (bookmark.getType() == Bookmark.Type.url) { %>
-<form name="urlForm" action="confirm-bookmark-delete.jsp" method="post">
-    <table class="div-border">
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.delete.url.urlname" /></b></td>
-            <td><%= bookmark.getName()%>
-        </tr>
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.delete.url.url" /></b></td>
-            <td><%= bookmark.getValue()%></td>
-        </tr>
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.delete.url.users" /></b></td>
-            <td><%= bookmark.getUsers()%>
-        </tr>
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.delete.url.groups" /></b></td>
-            <td><%= bookmark.getGroups()%>
-        </tr>
-        <tr><td></td>
-            <td>
-                <input type="submit" name="delete" value="<fmt:message key="bookmark.delete.url.submit" />"/>&nbsp;
-                <input type="button" value="<fmt:message key="bookmark.delete.url.cancel" />"
-                       onclick="window.location.href='url-bookmarks.jsp'; return false;">
-            </td>
-        </tr>
+<c:choose>
+    <c:when test="${bookmark.type eq 'url'}">
+        <form name="urlForm" action="confirm-bookmark-delete.jsp" method="post">
+            <table class="div-border">
+                <tr valign="top">
+                    <td><b><fmt:message key="bookmark.delete.url.urlname" /></b></td>
+                    <td><c:out value="${bookmark.name}"/></td>
+                </tr>
+                <tr valign="top">
+                    <td><b><fmt:message key="bookmark.delete.url.url" /></b></td>
+                    <td><c:out value="${bookmark.value}"/></td>
+                </tr>
+                <tr valign="top">
+                    <td><b><fmt:message key="bookmark.delete.url.users" /></b></td>
+                    <td>
+                        <c:choose>
+                            <c:when test="${bookmark.globalBookmark}">
+                                ALL
+                            </c:when>
+                            <c:otherwise>
+                                <c:forEach items="${bookmark.users}" var="user" varStatus="status">
+                                    <c:out value="${user}"/><c:if test="${not status.last}">, </c:if>
+                                </c:forEach>
+                            </c:otherwise>
+                        </c:choose>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <td><b><fmt:message key="bookmark.delete.url.groups" /></b></td>
+                    <td>
+                        <c:choose>
+                            <c:when test="${bookmark.globalBookmark}">
+                                ALL
+                            </c:when>
+                            <c:otherwise>
+                                <c:forEach items="${bookmark.groups}" var="group" varStatus="status">
+                                    <c:out value="${group}"/><c:if test="${not status.last}">, </c:if>
+                                </c:forEach>
+                            </c:otherwise>
+                        </c:choose>
+                    </td>
+                </tr>
+                <tr><td></td>
+                    <td>
+                        <input type="submit" name="delete" value="<fmt:message key="bookmark.delete.url.submit" />"/>&nbsp;
+                        <input type="button" value="<fmt:message key="bookmark.delete.url.cancel" />"
+                               onclick="window.location.href='url-bookmarks.jsp'; return false;">
+                    </td>
+                </tr>
 
-    </table>
-    <input type="hidden" name="bookmarkID" value="<%= bookmarkID%>"/>
-</form>
+            </table>
+            <input type="hidden" name="bookmarkID" value="${bookmark.bookmarkID}"/>
+        </form>
+    </c:when>
+    <c:when test="${bookmark.type.name() eq 'group_chat'}">
+        <form name="f" action="confirm-bookmark-delete.jsp" method="post">
 
-<% }
-else { %>
+            <table class="div-border" width="50%">
+                <tr valign="top">
+                    <td><b><fmt:message key="bookmark.delete.chat.groupname" /></b></td>
+                    <td class="field-text"><c:out value="${bookmark.name}"/></td>
+                </tr>
+                <tr valign="top">
+                    <td><b><fmt:message key="bookmark.delete.chat.address" /></b></td>
+                    <td class="field-text"><c:out value="${bookmark.value}"/></td>
+                </tr>
+                <tr valign="top">
+                    <td><b><fmt:message key="bookmark.delete.chat.users" /></b></td>
+                    <td class="field-text">
+                        <c:choose>
+                            <c:when test="${bookmark.globalBookmark}">
+                                ALL
+                            </c:when>
+                            <c:otherwise>
+                                <c:forEach items="${bookmark.users}" var="user" varStatus="status">
+                                    <c:out value="${user}"/><c:if test="${not status.last}">, </c:if>
+                                </c:forEach>
+                            </c:otherwise>
+                        </c:choose>
+                    </td>
+                </tr>
 
-<form name="f" action="confirm-bookmark-delete.jsp" method="post">
+                <tr valign="top">
+                    <td><b><fmt:message key="bookmark.delete.chat.groups" /></b></td>
+                    <td class="field-text">
+                        <c:choose>
+                            <c:when test="${bookmark.globalBookmark}">
+                                ALL
+                            </c:when>
+                            <c:otherwise>
+                                <c:forEach items="${bookmark.groups}" var="group" varStatus="status">
+                                    <c:out value="${group}"/><c:if test="${not status.last}">, </c:if>
+                                </c:forEach>
+                            </c:otherwise>
+                        </c:choose>
+                    </td>
+                </tr>
+                <tr>
+                    <td><b><fmt:message key="bookmark.delete.chat.autojoin" /></b></td>
+                    <td><c:if test="${bookmark.autojoin}"><img src='/images/check.gif'></c:if></td>
+                </tr>
+                <tr>
+                    <td><b><fmt:message key="bookmark.delete.chat.nameasnick" /></b></td>
+                    <td><c:if test="${bookmark.nameAsNick}"><img src='/images/check.gif'></c:if></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>
+                        <input type="submit" name="delete" value="<fmt:message key="bookmark.delete.chat.submit" />">
+                        <input type="button" value="<fmt:message key="bookmark.delete.chat.cancel" />"
+                               onclick="window.location.href='groupchat-bookmarks.jsp'; return false;">
+                </td>
+                </tr>
 
-    <table class="div-border" width="50%">
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.delete.chat.groupname" /></b></td>
-            <td class="field-text"><%= bookmark.getName()%></td>
-        </tr>
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.delete.chat.address" /></b></td>
-            <td class="field-text"><%= bookmark.getValue()%>
-        </tr>
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.delete.chat.users" /></b></td>
-            <td class="field-text"><%= bookmark.isGlobalBookmark() ? "ALL" : getCommaDelimitedList(bookmark.getUsers(), 5)%></td>
-        </tr>
-
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.delete.chat.groups" /></b></td>
-            <td class="field-text"><%= bookmark.isGlobalBookmark() ? "ALL" : getCommaDelimitedList(bookmark.getGroups(), 5) %></td>
-        </tr>
-        <tr>
-            <td><b><fmt:message key="bookmark.delete.chat.autojoin" /></b></td>
-            <td><%= bookmark.getProperty("autojoin") != null ? "<img src='/images/check.gif'>" : "&nbsp;"%></td>
-        </tr>
-        <tr>
-            <td><b><fmt:message key="bookmark.delete.chat.nameasnick" /></b></td>
-            <td><%= bookmark.getProperty("nameasnick") != null ? "<img src='/images/check.gif'>" : "&nbsp;"%></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td>
-                <input type="submit" name="delete" value="<fmt:message key="bookmark.delete.chat.submit" />">
-                <input type="button" value="<fmt:message key="bookmark.delete.chat.cancel" />"
-                       onclick="window.location.href='groupchat-bookmarks.jsp'; return false;">
-        </td>
-        </tr>
-
-    </table>
-    <input type="hidden" name="bookmarkID" value="<%= bookmarkID%>"/>
-</form>
-<% } %>
+            </table>
+            <input type="hidden" name="bookmarkID" value="${bookmark.bookmarkID}"/>
+        </form>
+    </c:when>
+</c:choose>
 </body>
 </html>
-
-<%!
-    /**
-     * A more elegant string representing all users that this bookmark
-     * "belongs" to.
-     *
-     * @return the string.
-     */
-    public String getCommaDelimitedList(Collection<String> strings, int limit) {
-        int counter = 0;
-        StringBuilder buf = new StringBuilder();
-        for (String string : strings) {
-            buf.append(string);
-            buf.append(",");
-            counter++;
-            if (counter >= limit) {
-                break;
-            }
-        }
-
-        String returnStr = buf.toString();
-        if (returnStr.endsWith(",")) {
-            returnStr = returnStr.substring(0, returnStr.length() - 1);
-        }
-        return returnStr;
-    }
-
-%>

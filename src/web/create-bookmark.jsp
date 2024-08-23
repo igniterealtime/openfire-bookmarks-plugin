@@ -8,23 +8,22 @@
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <%@ page import="java.util.StringTokenizer" %>
-<%@ page import="java.util.Iterator"%>
 <%@ page import="org.jivesoftware.util.NotFoundException"%>
 <%@ page import="org.jivesoftware.util.LocaleUtils"%>
-<%@ page import="org.apache.commons.lang3.StringEscapeUtils"%>
+<%@ page import="org.slf4j.LoggerFactory" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%
-    boolean urlType = false;
-    boolean groupchatType = false;    
+    boolean isUrlType = false;
+    boolean isGroupchatType = false;
     String propertyAction = request.getParameter("property");
     String type = request.getParameter("type");
     
     if ("url".equals(type)) {
-        urlType = true;
+        isUrlType = true;
     }
     else {
-        groupchatType = true;   
+        isGroupchatType = true;
     }
 
     boolean edit = request.getParameter("edit") != null;
@@ -47,10 +46,10 @@
                     editBookmark.deleteProperty(propName);
                 }
             
-                if (urlType) {
+                if (isUrlType) {
                     response.sendRedirect("url-bookmarks.jsp");
                 }
-                else if (groupchatType) {
+                else if (isGroupchatType) {
                     response.sendRedirect("groupchat-bookmarks.jsp");
                 }
                 return;                
@@ -61,12 +60,12 @@
         }
     }
 
-    Map<String,String> errors = new HashMap<String,String>();
-    String groupchatName = StringEscapeUtils.escapeHtml4(request.getParameter("groupchatName"));
+    Map<String,String> errors = new HashMap<>();
+    String groupchatName = request.getParameter("groupchatName");
     String groupchatJID = request.getParameter("groupchatJID");  
 
-    boolean autojoin = ParamUtils.getBooleanParameter(request,"autojoin");
-    boolean nameAsNick = ParamUtils.getBooleanParameter(request,"nameasnick");
+    boolean isAutojoin = ParamUtils.getBooleanParameter(request,"autojoin");
+    boolean isNameAsNick = ParamUtils.getBooleanParameter(request,"nameasnick");
     String avatarUri = request.getParameter("avatarUri");      
 
     String users = request.getParameter("users");
@@ -81,18 +80,18 @@
     boolean isCollabApp = ParamUtils.getBooleanParameter(request, "collabapp", false);
     boolean isHomePage = ParamUtils.getBooleanParameter(request, "homepage", false);   
 
-    boolean allUsers = ParamUtils.getBooleanParameter(request,"all");
+    boolean isAllUsers = ParamUtils.getBooleanParameter(request,"all");
 
-    boolean createGroupchat = request.getParameter("createGroupchatBookmark") != null;
-    boolean createURLBookmark = request.getParameter("createURLBookmark") != null;
+    boolean isCreateGroupchat = request.getParameter("createGroupchatBookmark") != null;
+    boolean isCreateURLBookmark = request.getParameter("createURLBookmark") != null;
 
 
-    boolean submit = false;
-    if (createGroupchat || createURLBookmark) {
-        submit = true;
+    boolean isSubmit = false;
+    if (isCreateGroupchat || isCreateURLBookmark) {
+        isSubmit = true;
     }
 
-    if (submit && createURLBookmark) {
+    if (isSubmit && isCreateURLBookmark) {
         if (url == null || url.trim().isEmpty()) {
             errors.put("url", LocaleUtils.getLocalizedString("bookmark.url.error", "bookmarks"));
         }
@@ -101,7 +100,7 @@
             errors.put("urlName", LocaleUtils.getLocalizedString("bookmark.urlName.error", "bookmarks"));
         }
     }
-    else if (submit && createGroupchat) {
+    else if (isSubmit && isCreateGroupchat) {
         if (groupchatName == null ||groupchatName.trim().isEmpty()) {
             errors.put("groupchatName", LocaleUtils.getLocalizedString("bookmark.groupchat.name.error", "bookmarks"));
         }
@@ -111,7 +110,7 @@
         }
     }
 
-    if (!submit && errors.size() == 0) {
+    if (!isSubmit && errors.isEmpty()) {
         if (editBookmark != null) {
             if (editBookmark.getType() == Bookmark.Type.url) {
                 url = editBookmark.getProperty("url");
@@ -119,14 +118,14 @@
             }
             else {
                 groupchatName = editBookmark.getName();
-                autojoin = editBookmark.getProperty("autojoin") != null;
-                nameAsNick = editBookmark.getProperty("nameasnick") != null;
+                isAutojoin = editBookmark.getProperty("autojoin") != null;
+                isNameAsNick = editBookmark.getProperty("nameasnick") != null;
                 groupchatJID = editBookmark.getValue();
             }
 
             users = getCommaDelimitedList(editBookmark.getUsers());
             groups = getCommaDelimitedList(editBookmark.getGroups());
-            allUsers = editBookmark.isGlobalBookmark();
+            isAllUsers = editBookmark.isGlobalBookmark();
             isRSS = editBookmark.getProperty("rss") != null;
             isWebApp = editBookmark.getProperty("webapp") != null;
             isCollabApp = editBookmark.getProperty("collabapp") != null;
@@ -142,36 +141,36 @@
         }
     }
     else {
-        if ((createURLBookmark || createGroupchat) && errors.size() == 0) {
+        if ((isCreateURLBookmark || isCreateGroupchat) && errors.isEmpty()) {
             Bookmark bookmark = null;
 
             if (bookmarkID == null) {
-                if (createURLBookmark)
+                if (isCreateURLBookmark)
                     bookmark = new Bookmark(Bookmark.Type.url, urlName, url);
 
-                if (createGroupchat) {
+                if (isCreateGroupchat) {
                     bookmark = new Bookmark(Bookmark.Type.group_chat, groupchatName, groupchatJID);
                 }
             }
             else {
                 try {
                     bookmark = new Bookmark(Long.parseLong(bookmarkID));
+                    if (isCreateURLBookmark) {
+                        bookmark.setName(urlName);
+                        bookmark.setValue(url);
+                    }
+                    else {
+                        bookmark.setName(groupchatName);
+                        bookmark.setValue(groupchatJID);
+                    }
                 }
                 catch (NotFoundException e) {
-                    Log.error(e);
-                }
-                if (createURLBookmark) {
-                    bookmark.setName(urlName);
-                    bookmark.setValue(url);
-                }
-                else {
-                    bookmark.setName(groupchatName);
-                    bookmark.setValue(groupchatJID);
+                    LoggerFactory.getLogger("create-bookmarks.jsp").error("Bookmark not found: {}", bookmarkID, e);
                 }
             }
 
-            List<String> userCollection = new ArrayList<String>();
-            List<String> groupCollection = new ArrayList<String>();
+            List<String> userCollection = new ArrayList<>();
+            List<String> groupCollection = new ArrayList<>();
             if (users != null) {
                 StringTokenizer tkn = new StringTokenizer(users, ",");
                 while (tkn.hasMoreTokens()) {
@@ -190,14 +189,14 @@
                 bookmark.setGroups(groupCollection);
             }
 
-            if (allUsers) {
+            if (isAllUsers) {
                 bookmark.setGlobalBookmark(true);
             }
             else {
                 bookmark.setGlobalBookmark(false);
             }
 
-            if (createURLBookmark) {
+            if (isCreateURLBookmark) {
                 if (url != null) {
                     bookmark.setProperty("url", url);
                 }
@@ -209,13 +208,13 @@
 
             }
             else {
-                if (autojoin) {
+                if (isAutojoin) {
                     bookmark.setProperty("autojoin", "true");
                 }
                     else {
                     bookmark.deleteProperty("autojoin");
                 }
-                if (nameAsNick) {
+                if (isNameAsNick) {
                     bookmark.setProperty("nameasnick", "true");
                 }
                     else {
@@ -228,18 +227,18 @@
         }
     }
 
-    if (submit && errors.size() == 0) {
-        if (createURLBookmark) {
+    if (isSubmit && errors.isEmpty()) {
+        if (isCreateURLBookmark) {
             response.sendRedirect("url-bookmarks.jsp?urlCreated=true");
             return;
         }
-        else if (createGroupchat) {
+        else if (isCreateGroupchat) {
             response.sendRedirect("groupchat-bookmarks.jsp?groupchatCreated=true");
         }
     }
 
     String description = LocaleUtils.getLocalizedString("bookmark.url.create.description", "bookmarks");
-    if (groupchatType) {
+    if (isGroupchatType) {
         description = LocaleUtils.getLocalizedString("bookmark.groupchat.create.description", "bookmarks");
         if(edit){
             description = LocaleUtils.getLocalizedString("bookmark.groupchat.edit.description", "bookmarks");
@@ -249,11 +248,37 @@
         description = LocaleUtils.getLocalizedString("bookmark.url.edit.description", "bookmarks");
     }
 
+    pageContext.setAttribute("editBookmark", editBookmark);
+    pageContext.setAttribute("bookmarkType", isGroupchatType ? Bookmark.Type.group_chat.name() : Bookmark.Type.url.name());
+    pageContext.setAttribute("description", description);
+    pageContext.setAttribute("url", url);
+    pageContext.setAttribute("urlName", urlName);
+    pageContext.setAttribute("errors", errors);
+    pageContext.setAttribute("isCreateURLBookmark", isCreateURLBookmark);
+    pageContext.setAttribute("isSubmit", isSubmit);
+    pageContext.setAttribute("isAllUsers", isAllUsers);
+    pageContext.setAttribute("isAutojoin", isAutojoin);
+    pageContext.setAttribute("isNameAsNick", isNameAsNick);
+    pageContext.setAttribute("isRSS", isRSS);
+    pageContext.setAttribute("isWebApp", isWebApp);
+    pageContext.setAttribute("isCollabApp", isCollabApp);
+    pageContext.setAttribute("isHomePage", isHomePage);
+    pageContext.setAttribute("users", users);
+    pageContext.setAttribute("groups", groups);
+    pageContext.setAttribute("groupchatName", groupchatName);
+    pageContext.setAttribute("groupchatJID", groupchatJID);
 %>
 <html>
 <head>
-    <title><%= editBookmark != null ? LocaleUtils.getLocalizedString("bookmark.edit", "bookmarks") : LocaleUtils.getLocalizedString("bookmark.create", "bookmarks")%></title>
-    <meta name="pageID" content="<%= groupchatType ? "groupchat-bookmarks" : "url-bookmarks"%>"/>
+    <title><c:choose>
+        <c:when test="${not empty editBookmark}">
+            <fmt:message key="bookmark.edit"/>
+        </c:when>
+        <c:otherwise>
+            <fmt:message key="bookmark.create"/>
+        </c:otherwise>
+    </c:choose></title>
+    <meta name="pageID" content="${bookmarkType eq 'group_chat' ? 'groupchat-bookmarks' : 'url-bookmarks'}"/>
     <script type="text/javascript">
         function toggleAllElement(ele, users, groups) {
             users.disabled = ele.checked;
@@ -331,215 +356,223 @@
 
 <!-- Create URL Bookmark -->
 <p>
-    <%= description%>
+    <c:out value="${description}"/>
 </p>
 
 
-<% if (submit && errors.size() == 0 && createURLBookmark) { %>
-<div class="success">
-   <fmt:message key="bookmark.created" />
-</div>
-<% } %>
-
-
-<% if (urlType) { %>
-<form id="urlForm" name="urlForm" action="create-bookmark.jsp" method="post">
-    <table class="div-border" cellpadding="3">
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.url.name" />:</b></td>
-            <td><input type="text" name="urlName" size="30" value="<%=urlName %>"/><br/>
-                <% if (errors.get("urlName") != null) { %>
-                <span class="jive-error-text"><%= errors.get("urlName")%><br/></span>
-                <% } %>
-                <span class="jive-description"><fmt:message key="bookmark.url.name.description" /></span></td>
-
-        </tr>
-        <tr valign="top">
-            <td><b><fmt:message key="bookmark.url" />:</b></td>
-            <td><input type="text" name="url" size="30" value="<%=url %>"/><br/>
-                <% if (errors.get("url") != null) { %>
-                <span class="jive-error-text"><%= errors.get("url")%><br/></span>
-                <% } %>
-                <span class="jive-description">eg. http://www.acme.com</span></td>
-        </tr>
-        <tr valign="top">
-            <td><b><fmt:message key="users" />:</b></td>
-            <td><input type="text" name="users" size="30" value="<%= users%>"/><br/>
-                <span class="jive-error-text"></span></td>
-            <!--
-            <td><img src="images/icon_browse_14x13.gif"/></td><td><a href="javascript:showPicker();"><fmt:message key="bookmark.browse.users" /></a></td>-->
-            <td><input type="checkbox" name="all" <%= allUsers ? "checked" : "" %> onclick="toggleAllElement(this, document.urlForm.users, document.urlForm.groups);"/>All Users</td>
-        </tr>
-
-        <tr valign="top">
-            <td><b><fmt:message key="groups" />:</b></td>
-            <td><input type="text" name="groups" size="30" value="<%= groups %>"/><br/><span
-                class="jive-error-text"></span></td><!--
-            <td><img src="images/icon_browse_14x13.gif"/></td><td><a href="javascript:showPicker();"><fmt:message key="bookmark.browse.groups" /></a></td>-->
-        </tr>
-        <% if (errors.get("noUsersOrGroups") != null) { %>
-        <tr>
-            <td colspan="2" class="jive-error-text"><fmt:message key="bookmark.users.groups.error" /></td>
-        </tr>
-        <% } %>
-        <tr><td><b><fmt:message key="bookmark.create.rss.feed" /></b></td><td><input type="checkbox" name="rss" <%= isRSS ? "checked" : "" %>/></td></tr>
-        <tr><td><b><fmt:message key="bookmark.create.web.app" /></b></td><td><input type="checkbox" name="webapp" <%= isWebApp ? "checked" : "" %>/></td></tr>
-        <tr><td><b><fmt:message key="bookmark.create.collab.app" /></b></td><td><input type="checkbox" name="collabapp" <%= isCollabApp ? "checked" : "" %>/></td></tr>
-        <tr><td><b><fmt:message key="bookmark.create.home.page" /></b></td><td><input type="checkbox" name="homepage" <%= isHomePage ? "checked" : "" %>/></td></tr>
-
-        <tr><td></td><td><input type="submit" name="createURLBookmark"
-                                value="<%= editBookmark != null ? LocaleUtils.getLocalizedString("bookmark.save.changes", "bookmarks") : LocaleUtils.getLocalizedString("create", "bookmarks")  %>"/>
-            &nbsp;<input type="button" value="<fmt:message key="cancel" />"
-                         onclick="window.location.href='url-bookmarks.jsp'; return false;">
-        </td>
-        </tr>
-
-    </table>
-    <input type="hidden" name="type" value="url"/>
-    <% if (editBookmark != null) { %>
-    <input type="hidden" name="bookmarkID" value="<%= editBookmark.getBookmarkID()%>"/>
-    <input type="hidden" name="edit" value="true" />
-    <% } %>
-
-<script type="text/javascript">
-   validateForms(document.urlForm);
-</script>
-</form>
-
-<% }
-else { %>
-
-<form name="f" id="f" action="create-bookmark.jsp" method="post">
-
-    <table class="div-border" cellpadding="3">
-        <tr valign="top">
-            <td><b><fmt:message key="group.chat.bookmark.name" />:</b></td>
-            <td colspan="3"><input type="text" name="groupchatName" size="40" value="<%= groupchatName %>"/><br/>
-                <% if (errors.get("groupchatName") != null) { %>
-                <span class="jive-error-text"><%= errors.get("groupchatName")%><br/></span>
-                <% } %>
-                <span class="jive-description">eg. Discussion Room</span></td>
-        </tr>
-        <tr valign="top">
-            <td><b><fmt:message key="group.chat.bookmark.address" />:</b></td>
-            <td colspan="3"><input type="text" name="groupchatJID" size="40" value="<%= groupchatJID %>"/><br/>
-                <% if (errors.get("groupchatJID") != null) { %>
-                <span class="jive-error-text"><%= errors.get("groupchatJID")%><br/></span>
-                <% } %>
-                <span class="jive-description">eg. myroom@conference.example.com</span></td>
-        </tr>
-
-        <tr valign="top">
-            <td><b><fmt:message key="users" />:</b></td>
-            <td><input type="text" name="users" size="30" value="<%= users%>"/><br/>
-                <span class="jive-error-text"></span></td>
-            <!--
-            <td><img src="images/icon_browse_14x13.gif"/></td><td><a href="javascript:showPicker();"><fmt:message key="bookmark.browse.users" /></a></td>-->
-            <td><input type="checkbox" name="all" <%= allUsers ? "checked" : "" %> onclick="toggleAllElement(this, document.f.users, document.f.groups);"/><fmt:message key="bookmark.create.all.users" /></td>
-        </tr>
-
-        <tr valign="top">
-            <td><b><fmt:message key="groups" />:</b></td>
-            <td><input type="text" name="groups" size="30" value="<%= groups %>"/><br/><span
-                class="jive-error-text"></span></td>
-            <!--
-            <td><img src="images/icon_browse_14x13.gif"/></td><td><a href="javascript:showPicker();"><fmt:message key="bookmark.browse.groups" /></a></td>-->
-        </tr>
-        <tr>
-            <td><b><fmt:message key="group.chat.bookmark.autojoin" />:</b></td><td><input type="checkbox" name="autojoin" <%= autojoin ? "checked" : "" %>/></td>
-        </tr>
-        <tr>
-            <td><b><fmt:message key="group.chat.bookmark.nameasnick" />:</b></td><td><input type="checkbox" name="nameasnick" <%= nameAsNick ? "checked" : "" %>/></td>
-        </tr>
-        <tr>
-            <input type="hidden" name="avatarUri" value=""/>        
-            <td><b><fmt:message key="group.chat.bookmark.icon" />:</b></td><td><input onchange="doicon()" name='uploadAvatar' id='uploadAvatar' type='file' name='files[]'> </td>
-        </tr>        
-        <tr>
-            <td></td>
-            <td><input type="submit" name="createGroupchatBookmark"  value="<%= editBookmark != null ? LocaleUtils.getLocalizedString("bookmark.save.changes", "bookmarks") : LocaleUtils.getLocalizedString("create", "bookmarks")  %>"/>&nbsp;
-                <input type="button" value="Cancel" onclick="window.location.href='groupchat-bookmarks.jsp'; return false;">
-            </td>
-        </tr>
-
-    </table>
-    <input type="hidden" name="type" value="groupchat"/>
-    <% if (editBookmark != null) { %>
-    <input type="hidden" name="bookmarkID" value="<%= editBookmark.getBookmarkID()%>"/>
-    <input type="hidden" name="edit" value="true" />
-    <% } %>
-
-<script type="text/javascript">
-    validateForms(document.f);
-</script>
-</form>
-
-<% } %>
-<% if (editBookmark != null) { %>
-<form name="propForm" id="propForm" action="create-bookmark.jsp" method="post">
-    <input type="hidden" name="type" value="<%= groupchatType ? "groupchat" : "url" %>"/>    
-    <input type="hidden" name="property" value="set"/>
-    <input type="hidden" name="edit" value="true" />
-    <input type="hidden" name="bookmarkID" value="<%= editBookmark.getBookmarkID()%>"/>    
-    <div class="jive-table">
-        <table cellspacing="0" width="100%">
-            <th><fmt:message key="property.property.name"/></th>
-            <th><fmt:message key="property.property.value"/></th>
-            <th><fmt:message key="property.edit"/></th>
-            <th><fmt:message key="property.delete"/></th>            
-            <%
-                Iterator<String> itr = editBookmark.getPropertyNames();
-                while (itr.hasNext()) {
-                    String propName = itr.next();
-                    String propValue = editBookmark.getProperty(propName);
-                    String formatValue = propValue;
-                    
-                    if (propValue.startsWith("data:"))  formatValue = "<img src='" + propValue + "' />";
-                    if (propName.contains("password")) formatValue = "*************";
-            %>
-            <tr>
-                <td><%=propName%></td>
-                <td><%=formatValue%></td>
-                <td><img src="/images/edit-16x16.gif" border="0" width="16" 
-                    height="16" alt="Edit Property" onclick="doedit('<%=propName%>', '<%=propValue%>')"></td>
-                <td><img src="/images/delete-16x16.gif" border="0" width="16"
-                    height="16" alt="Delete Property" onclick="dodelete('<%=propName%>')"></td>
-            </tr>
-
-            <%
-                }
-            %>
-        </table>
+<c:if test="${isSubmit and empty errors and isCreateURLBookmark}">
+    <div class="success">
+        <fmt:message key="bookmark.created" />
     </div>
-    <div class="jive-table">
-        <table cellpadding="0" cellspacing="0" border="0" width="100%">
-            <thead>
+</c:if>
+
+<c:choose>
+    <c:when test="${bookmarkType eq 'url'}">
+        <form id="urlForm" name="urlForm" action="create-bookmark.jsp" method="post">
+            <table class="div-border" cellpadding="3">
+                <tr valign="top">
+                    <td><b><label for="urlName"><fmt:message key="bookmark.url.name" />:</label></b></td>
+                    <td><input type="text" name="urlName" id="urlName" size="30" value="<c:out value="${urlName}"/>"/><br/>
+                        <c:if test="${not empty errors['urlName']}">
+                            <span class="jive-error-text"><c:out value="${errors['urlName']}"/><br/></span>
+                        </c:if>
+                        <span class="jive-description"><fmt:message key="bookmark.url.name.description" /></span></td>
+                </tr>
+                <tr valign="top">
+                    <td><b><label for="url"><fmt:message key="bookmark.url" />:</label></b></td>
+                    <td><input type="text" name="url" id="url" size="30" value="<c:out value="${url}"/>"/><br/>
+                        <c:if test="${not empty errors['url']}">
+                            <span class="jive-error-text"><c:out value="${errors['url']}"/><br/></span>
+                        </c:if>
+                        <span class="jive-description">eg. http://www.acme.com</span></td>
+                </tr>
+                <tr valign="top">
+                    <td><b><label for="users"><fmt:message key="users" />:</label></b></td>
+                    <td><input type="text" name="users" id="users" size="30" value="<c:out value="${users}"/>"/><br/>
+                        <span class="jive-error-text"></span></td>
+                    <!--
+                    <td><img src="images/icon_browse_14x13.gif"/></td><td><a href="javascript:showPicker();"><fmt:message key="bookmark.browse.users" /></a></td>-->
+                    <td><input type="checkbox" id="all" name="all" ${isAllUsers ? 'checked' : ''} onclick="toggleAllElement(this, document.urlForm.users, document.urlForm.groups);"/><label for="all">All Users</label></td>
+                </tr>
+
+                <tr valign="top">
+                    <td><b><label for="groups"><fmt:message key="groups" />:</label></b></td>
+                    <td><input type="text" name="groups" id="groups" size="30" value="<c:out value="${groups}"/>"/><br/><span
+                        class="jive-error-text"></span></td><!--
+                    <td><img src="images/icon_browse_14x13.gif"/></td><td><a href="javascript:showPicker();"><fmt:message key="bookmark.browse.groups" /></a></td>-->
+                </tr>
+                <c:if test="${not empty errors['noUsersOrGroups']}">
+                    <tr>
+                        <td colspan="2" class="jive-error-text"><fmt:message key="bookmark.users.groups.error" /></td>
+                    </tr>
+                </c:if>
+                <tr><td><b><label for="rss"><fmt:message key="bookmark.create.rss.feed" /></label></b></td><td><input type="checkbox" name="rss" id="rss" ${isRSS ? 'checked' : ''}/></td></tr>
+                <tr><td><b><label for="webapp"><fmt:message key="bookmark.create.web.app" /></label></b></td><td><input type="checkbox" name="webapp" id="webapp" ${isWebApp ? 'checked' : ''}/></td></tr>
+                <tr><td><b><label for="collabapp"><fmt:message key="bookmark.create.collab.app" /></label></b></td><td><input type="checkbox" name="collabapp" id="collabapp" ${isCollabApp ? 'checked' : ''}/></td></tr>
+                <tr><td><b><label for="homepage"><fmt:message key="bookmark.create.home.page" /></label></b></td><td><input type="checkbox" name="homepage" id="homepage" ${isHomePage ? 'checked' : ''}/></td></tr>
+
+                <tr><td></td><td>
+                    <c:choose>
+                        <c:when test="${not empty editBookmark}">
+                            <c:set var="buttonLabel"><fmt:message key="bookmark.save.changes"/></c:set>
+                        </c:when>
+                        <c:otherwise>
+                            <c:set var="buttonLabel"><fmt:message key="create"/></c:set>
+                        </c:otherwise>
+                    </c:choose>
+                    <input type="submit" name="createURLBookmark" value="<c:out value="${buttonLabel}"/>"/>
+                    &nbsp;<input type="button" value="<fmt:message key="cancel" />"
+                                 onclick="window.location.href='url-bookmarks.jsp'; return false;">
+                </td>
+                </tr>
+
+            </table>
+            <input type="hidden" name="type" value="url"/>
+            <c:if test="${not empty editBookmark}">
+                <input type="hidden" name="bookmarkID" value="<c:out value="${editBookmark.bookmarkID}"/>"/>
+                <input type="hidden" name="edit" value="true" />
+            </c:if>
+
+        <script type="text/javascript">
+           validateForms(document.urlForm);
+        </script>
+        </form>
+
+    </c:when>
+    <c:when test="${bookmarkType eq 'group_chat'}">
+
+        <form name="f" id="f" action="create-bookmark.jsp" method="post">
+
+            <table class="div-border" cellpadding="3">
+                <tr valign="top">
+                    <td><b><label for="groupchatName"><fmt:message key="group.chat.bookmark.name" />:</label></b></td>
+                    <td colspan="3"><input type="text" name="groupchatName" id="groupchatName" size="40" value="<c:out value="${groupchatName}"/>"/><br/>
+                        <c:if test="${not empty errors['groupchatName']}">
+                            <span class="jive-error-text"><c:out value="${errors['groupchatName']}"/><br/></span>
+                        </c:if>
+                        <span class="jive-description">eg. Discussion Room</span></td>
+                </tr>
+                <tr valign="top">
+                    <td><b><label for="groupchatJID"><fmt:message key="group.chat.bookmark.address" />:</label></b></td>
+                    <td colspan="3"><input type="text" name="groupchatJID" id="groupchatJID" size="40" value="<c:out value="${groupchatJID}"/>"/><br/>
+                        <c:if test="${not empty errors['groupchatJID']}">
+                            <span class="jive-error-text"><c:out value="${errors['groupchatJID']}"/><br/></span>
+                        </c:if>
+                        <span class="jive-description">eg. myroom@conference.example.com</span></td>
+                </tr>
+
+                <tr valign="top">
+                    <td><b><label for="grusers"><fmt:message key="users" />:</label></b></td>
+                    <td><input type="text" name="users" id="grusers" size="30" value="<c:out value="${users}"/>"><br/>
+                        <span class="jive-error-text"></span></td>
+                    <!--
+                    <td><img src="images/icon_browse_14x13.gif"/></td><td><a href="javascript:showPicker();"><fmt:message key="bookmark.browse.users" /></a></td>-->
+                    <td><input type="checkbox" name="all" id="grall" ${isAllUsers ? 'checked' : ''} onclick="toggleAllElement(this, document.f.users, document.f.groups);"/><label for="grall"><fmt:message key="bookmark.create.all.users" /></label></td>
+                </tr>
+
+                <tr valign="top">
+                    <td><b><label for="grgroups"><fmt:message key="groups" />:</label></b></td>
+                    <td><input type="text" name="groups" id="grgroups" size="30" value="<c:out value="${groups}"/>"/><br/><span
+                        class="jive-error-text"></span></td>
+                    <!--
+                    <td><img src="images/icon_browse_14x13.gif"/></td><td><a href="javascript:showPicker();"><fmt:message key="bookmark.browse.groups" /></a></td>-->
+                </tr>
                 <tr>
-                    <th colspan="2"><fmt:message key="property.edit.property"/></th>
+                    <td><b><label for="autojoin"><fmt:message key="group.chat.bookmark.autojoin" />:</label></b></td><td><input type="checkbox" name="autojoin" id="autojoin" ${isAutojoin ? 'checked' : ''}/></td>
                 </tr>
-            </thead>
-            <tbody>
-                <tr valign="top">
-                    <td><fmt:message key="property.property.name"/>:</td>
-                    <td><input type="textfield" id="propName" name="propName"
-                        value=""></td>
+                <tr>
+                    <td><b><label for="nameasnick"><fmt:message key="group.chat.bookmark.nameasnick" />:</label></b></td><td><input type="checkbox" name="nameasnick" id="nameasnick" ${isNameAsNick ? 'checked' : ''}/></td>
                 </tr>
-                <tr valign="top">
-                    <td><fmt:message key="property.property.value"/>:</td>
-                    <td><textarea cols="45" rows="5" id="propValue" name="propValue" style="z-index: auto; position: relative; line-height: normal; font-size: 13.3333px; transition: none; background: transparent !important;"></textarea>
+                <tr>
+                    <input type="hidden" name="avatarUri" value=""/>
+                    <td><b><fmt:message key="group.chat.bookmark.icon" />:</b></td><td><input onchange="doicon()" name='uploadAvatar' id='uploadAvatar' type='file' name='files[]'> </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><c:choose>
+                            <c:when test="${not empty editBookmark}">
+                                <c:set var="buttonLabel"><fmt:message key="bookmark.save.changes"/></c:set>
+                            </c:when>
+                            <c:otherwise>
+                                <c:set var="buttonLabel"><fmt:message key="create"/></c:set>
+                            </c:otherwise>
+                        </c:choose>
+                        <input type="submit" name="createGroupchatBookmark" value="<c:out value="${buttonLabel}"/>"/>
+                        <input type="button" value="Cancel" onclick="window.location.href='groupchat-bookmarks.jsp'; return false;">
                     </td>
                 </tr>
 
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="2"><input type="submit" value="Save" /></td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
-</form>
-<% } %>
+            </table>
+            <input type="hidden" name="type" value="groupchat"/>
+            <c:if test="${not empty editBookmark}">
+                <input type="hidden" name="bookmarkID" value="<c:out value="${editBookmark.bookmarkID}"/>"/>
+                <input type="hidden" name="edit" value="true" />
+            </c:if>
+
+        <script type="text/javascript">
+            validateForms(document.f);
+        </script>
+        </form>
+
+    </c:when>
+</c:choose>
+
+<c:if test="${not empty editBookmark}">
+    <form name="propForm" id="propForm" action="create-bookmark.jsp" method="post">
+        <input type="hidden" name="type" value="<c:out value="${bookmarkType eq 'group_chat' ? 'groupchat' : 'url'}"/>"/>
+        <input type="hidden" name="property" value="set"/>
+        <input type="hidden" name="edit" value="true" />
+        <input type="hidden" name="bookmarkID" value="<c:out value="${editBookmark.bookmarkID}"/>"/>
+        <div class="jive-table">
+            <table cellspacing="0" width="100%">
+                <th><fmt:message key="property.property.name"/></th>
+                <th><fmt:message key="property.property.value"/></th>
+                <th><fmt:message key="property.edit"/></th>
+                <th><fmt:message key="property.delete"/></th>
+                <c:forEach items="${editBookmark.properties}" var="propEntry" varStatus="status">
+                    <tr>
+                        <td><c:out value="${propEntry.key}"/></td>
+                        <td><c:choose>
+                            <c:when test="${propEntry.key.contains('password')}">*************</c:when>
+                            <c:when test="${propEntry.value.startsWith('data:')}"><img src="<c:out value="${propEntry.value}"/>"/></c:when>
+                            <c:otherwise><c:out value="${propEntry.value}"/></c:otherwise>
+                        </c:choose></td>
+                        <td><img src="/images/edit-16x16.gif" border="0" width="16"
+                                 height="16" alt="Edit Property" onclick="doedit('<c:out value="${propEntry.key}"/>', '<c:out value="${propEntry.value}"/>')"></td>
+                        <td><img src="/images/delete-16x16.gif" border="0" width="16"
+                                 height="16" alt="Delete Property" onclick="dodelete('<c:out value="${propEntry.key}"/>')"></td>
+                    </tr>
+                </c:forEach>
+            </table>
+        </div>
+        <div class="jive-table">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <thead>
+                    <tr>
+                        <th colspan="2"><fmt:message key="property.edit.property"/></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr valign="top">
+                        <td><fmt:message key="property.property.name"/>:</td>
+                        <td><input id="propName" name="propName" value=""></td>
+                    </tr>
+                    <tr valign="top">
+                        <td><fmt:message key="property.property.value"/>:</td>
+                        <td><textarea cols="45" rows="5" id="propValue" name="propValue" style="z-index: auto; position: relative; line-height: normal; font-size: 13.3333px; transition: none; background: transparent !important;"></textarea>
+                        </td>
+                    </tr>
+
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><input type="submit" value="Save" /></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </form>
+</c:if>
 </body>
 </html>
 
