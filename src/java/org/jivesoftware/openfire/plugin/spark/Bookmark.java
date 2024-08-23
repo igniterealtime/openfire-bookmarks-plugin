@@ -1,8 +1,5 @@
 /**
- * $Revision: 3034 $
- * $Date: 2005-11-04 21:02:33 -0300 (Fri, 04 Nov 2005) $
- *
- * Copyright (C) 2006-2008 Jive Software. All rights reserved.
+ * Copyright (C) 2006-2008 Jive Software. 2016-2024 Ignite Realtime Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -403,6 +400,42 @@ public class Bookmark implements Serializable {
     }
 
     /**
+     * A short-cut method for checking if a property of name 'autojoin' is set to 'true'.
+     *
+     * @return if the 'autojoin' property is set to 'true'
+     */
+    public boolean isAutojoin() {
+        return getProperty("autojoin") != null && getProperty("autojoin").equals("true");
+    }
+
+    /**
+     * A short-cut method for checking if a property of name 'nameasnick' is set to 'true'.
+     *
+     * @return if the 'nameasnick' property is set to 'true'
+     */
+    public boolean isNameAsNick() {
+        return getProperty("nameasnick") != null && getProperty("nameasnick").equals("true");
+    }
+
+    /**
+     * A short-cut method for checking if a property of name 'rss' is set to 'true'.
+     *
+     * @return if the 'nameasnick' property is set to 'true'
+     */
+    public boolean isRss() {
+        return getProperty("rss") != null && getProperty("rss").equals("true");
+    }
+
+    /**
+     * A short-cut method for getting the value of the property with name 'avatar_uri'.
+     *
+     * @return the 'avatar_uri' property value
+     */
+    public String getAvatarUri() {
+        return getProperty("avatar_uri");
+    }
+
+    /**
      * Deletes an extended property. If the property specified by
      * <code>name</code> does not exist, this method will do nothing.
      *
@@ -429,6 +462,18 @@ public class Bookmark implements Serializable {
             loadPropertiesFromDb();
         }
         return Collections.unmodifiableSet(properties.keySet()).iterator();
+    }
+
+    /**
+     * Returns an unmodifiable copy of the extended properties.
+     *
+     * @return the extended properties.
+     */
+    public Map<String, String> getProperties() {
+        if (properties == null) {
+            loadPropertiesFromDb();
+        }
+        return Collections.unmodifiableMap(properties);
     }
 
     /**
