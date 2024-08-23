@@ -9,8 +9,8 @@
     <description>Allows clients to store URL and group chat bookmarks (XEP-0048)</description>
     <author>Ignite Realtime</author>
     <version>${project.version}</version>
-    <date>2022-10-06</date>
-    <minServerVersion>4.0.0</minServerVersion>
+    <date>2024-08-23</date>
+    <minServerVersion>4.4.0</minServerVersion>
     <minJavaVersion>1.8</minJavaVersion>
 
     <!-- Keep the 'clientcontrol' database key for backwards compatibility. Client control itself does not have any database. -->
