@@ -86,11 +86,11 @@
 
             <% if (!hasBookmarks) { %>
             <tr>
-                <td colspan="7" align="center"><fmt:message key="group.chat.bookmark.none" /></td>
+                <td colspan="8" align="center"><fmt:message key="group.chat.bookmark.none" /></td>
             </tr>
             <%} %>
             <tr>
-                <td colspan="7">
+                <td colspan="8">
                     <a href="create-bookmark.jsp?type=group_chat"><img src="/images/add-16x16.gif" border="0" align="texttop" style="margin-right: 3px;"/><fmt:message key="group.chat.bookmark.add" /></a>
                 </td>
             </tr>
